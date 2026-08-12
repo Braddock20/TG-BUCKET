@@ -232,3 +232,4 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 server.listen(port, '0.0.0.0', () => {
   console.log(`[tg-bucket] API listening on 0.0.0.0:${port}`);
 });
+app.use(express.static('public'));
