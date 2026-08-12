@@ -43,6 +43,13 @@ app.put('/:key(*)', async (req, res) => {
   res.json({ ok: true, ...r });
 });
 
+// Must come BEFORE '/:key(*)' below — that wildcard route can match the bare
+// root with key='' since (*) allows zero segments, which would swallow this
+// list route and return a false "Object not found" 404 instead of the list.
+app.get('/', async (_req, res) => {
+  res.json(await bucket.list(''));
+});
+
 app.get('/:key(*)', async (req, res) => {
   try {
     const stream = await bucket.get(req.params.key);
@@ -52,10 +59,6 @@ app.get('/:key(*)', async (req, res) => {
   } catch (e) {
     res.status(404).send(e.message);
   }
-});
-
-app.get('/', async (_req, res) => {
-  res.json(await bucket.list(''));
 });
 
 app.delete('/:key(*)', async (req, res) => {
