@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TG-BUCKET • API Tester</title>
+<style>
+:root{--bg:#080a0f;--panel:#10141c;--panel2:#151a24;--line:#252c39;--text:#f4f7fb;--muted:#8d98aa;--accent:#8b7cff;--good:#37d69a;--bad:#ff6574}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(900px 500px at 80% -10%,#28204f 0,transparent 55%),var(--bg);color:var(--text);font:15px/1.5 Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+.wrap{max-width:1080px;margin:auto;padding:28px 18px 50px}.top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:26px}
+.brand{display:flex;align-items:center;gap:12px}.logo{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,#9b8cff,#5f52df);display:grid;place-items:center;font-weight:900;box-shadow:0 10px 35px #6356d933}.brand h1{font-size:20px;margin:0}.brand p{margin:2px 0 0;color:var(--muted);font-size:12px}
+.status{padding:8px 11px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:12px}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--muted);margin-right:7px}.online .dot{background:var(--good)}
+.grid{display:grid;grid-template-columns:1.25fr .75fr;gap:18px}@media(max-width:800px){.grid{grid-template-columns:1fr}.top{align-items:flex-start}}
+.card{background:linear-gradient(180deg,#121720,#0f131b);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:0 18px 60px #0005}.card h2{font-size:16px;margin:0 0 15px}.sub{color:var(--muted);font-size:12px;margin-top:-9px;margin-bottom:16px}
+label{display:block;color:#aeb7c7;font-size:12px;margin:12px 0 7px}input,select{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:11px;padding:12px;outline:none}input:focus,select:focus{border-color:var(--accent)}
+.row{display:grid;grid-template-columns:1fr 150px;gap:10px}.actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:15px}button{border:1px solid var(--line);background:#171d28;color:var(--text);padding:10px 14px;border-radius:11px;cursor:pointer;font-weight:650}button:hover{border-color:#555f74;background:#1b2230}button.primary{background:var(--accent);border-color:var(--accent)}button.danger{color:#ff8a96}.drop{border:1px dashed #3a4352;border-radius:14px;padding:22px;text-align:center;margin-top:12px;color:var(--muted);cursor:pointer}.drop strong{color:var(--text)}#file{display:none}
+pre{margin:0;background:#090c12;border:1px solid var(--line);border-radius:13px;padding:14px;min-height:220px;max-height:430px;overflow:auto;white-space:pre-wrap;word-break:break-word;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace}.meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.pill{font-size:11px;padding:5px 8px;border-radius:8px;background:#171d28;color:var(--muted)}.pill.good{color:var(--good)}.files{margin-top:18px}.file{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #202631}.file:last-child{border-bottom:0}.fname{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fsize{font-size:11px;color:var(--muted)}.empty{color:var(--muted);font-size:13px;padding:10px 0}.url{color:#b9b1ff;word-break:break-all;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><div class="logo">TB</div><div><h1>TG-BUCKET</h1><p>Vanilla API tester • browser storage console</p></div></div>
+    <div id="status" class="status"><span class="dot"></span>Checking API…</div>
+  </header>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Upload / request</h2>
+      <div class="sub">Test the live API directly from this page.</div>
+      <label>API base URL</label>
+      <input id="base" value="https://tg-bucketnpm-instal.onrender.com">
+      <label>API key <span style="color:#687386">(optional)</span></label>
+      <input id="key" type="password" placeholder="Leave empty while authentication is disabled">
+      <div class="row">
+        <div><label>File key / name</label><input id="name" placeholder="hello.txt"></div>
+        <div><label>Method</label><select id="method"><option>PUT — Upload</option><option>GET — Download</option><option>DELETE — Delete</option></select></div>
+      </div>
+      <div id="drop" class="drop">Drop a file here or <strong>choose one</strong><input id="file" type="file"></div>
+      <div class="actions">
+        <button class="primary" onclick="runRequest()">Run request</button>
+        <button onclick="listFiles()">Refresh files</button>
+        <button onclick="health()">Health</button>
+        <button onclick="apiInfo()">API info</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Response</h2>
+      <div class="meta"><span id="code" class="pill">—</span><span id="time" class="pill">—</span></div>
+      <pre id="out">Ready. Try Health or Refresh files.</pre>
+      <div style="margin-top:14px"><div class="sub" style="margin:0 0 5px">Download URL</div><div id="downloadUrl" class="url">—</div></div>
+    </section>
+  </div>
+
+  <section class="card files">
+    <h2>Stored files</h2>
+    <div class="sub">Loaded from <code>/files</code>.</div>
+    <div id="files"><div class="empty">Click “Refresh files”.</div></div>
+  </section>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const base=()=>$('base').value.trim().replace(/\/+$/,'');
+const headers=()=>{const h={};const k=$('key').value.trim();if(k)h.Authorization='Bearer '+k;return h};
+const show=(data,status,time,url='')=>{$('code').textContent=status?status+' '+(status>=200&&status<300?'OK':'Error'):'—';$('code').className='pill '+(status>=200&&status<300?'good':'');$('time').textContent=time?time+' ms':'—';$('out').textContent=typeof data==='string'?data:JSON.stringify(data,null,2);$('downloadUrl').textContent=url||'—'};
+async function req(path,opt={}){const t=performance.now();try{const r=await fetch(base()+path,{...opt,headers:{...headers(),...(opt.headers||{})}});const ct=r.headers.get('content-type')||'';const data=ct.includes('json')?await r.json():await r.text();show(data,r.status,Math.round(performance.now()-t),r.ok&&path.startsWith('/files/')&&opt.method!=='DELETE'?base()+path:'');return r}catch(e){show('Request failed: '+e.message,0,Math.round(performance.now()-t));throw e}}
+async function health(){await req('/health')}
+async function apiInfo(){await req('/api')}
+async function listFiles(){const r=await req('/files');if(!r)return;try{const raw=JSON.parse($('out').textContent);renderFiles(raw)}catch{}}
+function renderFiles(raw){const arr=Array.isArray(raw)?raw:(raw.files||raw.objects||raw.items||[]);$('files').innerHTML=arr.length?arr.map(x=>{const k=x.key||x.name||x.path||String(x);const s=x.size?format(x.size):'';return `<div class="file"><div><div class="fname">${esc(k)}</div><div class="fsize">${esc(s)}</div></div><div class="actions" style="margin:0"><button onclick="download('${encodeURIComponent(k)}')">Download</button><button class="danger" onclick="removeFile('${encodeURIComponent(k)}')">Delete</button></div></div>`}).join(''):'<div class="empty">No files returned.</div>'}
+async function runRequest(){const name=$('name').value.trim();const method=$('method').value.split(' ')[0];if(!name)return alert('Enter a file key/name.');if(method==='PUT'){const f=$('file').files[0];if(!f)return alert('Choose a file to upload.');await req('/files/'+encodeURIComponent(name),{method:'PUT',body:f,headers:{'Content-Type':f.type||'application/octet-stream'}});await listFiles()}else if(method==='GET')download(encodeURIComponent(name));else {await removeFile(encodeURIComponent(name));await listFiles()}}
+function download(k){const url=base()+'/files/'+k;$('downloadUrl').textContent=url;const a=document.createElement('a');a.href=url;const key=$('key').value.trim();if(key){fetch(url,{headers:headers()}).then(r=>r.blob()).then(b=>{a.href=URL.createObjectURL(b);a.download=decodeURIComponent(k);a.click()})}else{a.click()}}
+async function removeFile(k){await req('/files/'+k,{method:'DELETE'})}
+function format(n){const u=['B','KB','MB','GB','TB'];let i=0;while(n>=1024&&i<u.length-1){n/=1024;i++}return n.toFixed(i?1:0)+' '+u[i]}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+$('drop').onclick=e=>{if(e.target!==$('file'))$('file').click()};$('file').onchange=()=>{const f=$('file').files[0];if(f){$('name').value=f.name;$('drop').innerHTML=`<strong>${esc(f.name)}</strong><br><span>${format(f.size)} • ready to upload</span><input id="file" type="file">`;document.getElementById('file').files=$('file').files}}
+$('drop').ondragover=e=>{e.preventDefault();$('drop').style.borderColor='#8b7cff'};$('drop').ondragleave=()=>{$('drop').style.borderColor=''};$('drop').ondrop=e=>{e.preventDefault();$('drop').style.borderColor='';const dt=e.dataTransfer;const input=$('file');input.files=dt.files;const f=dt.files[0];if(f)$('name').value=f.name;$('drop').innerHTML=`<strong>${esc(f.name)}</strong><br><span>${format(f.size)} • ready to upload</span>`}
+(async()=>{try{const r=await fetch(base()+'/health');if(r.ok){$('status').className='status online';$('status').innerHTML='<span class="dot"></span>API online'}}catch{ $('status').innerHTML='<span class="dot"></span>API unreachable'}})();
+</script>
+</body>
+</html>
