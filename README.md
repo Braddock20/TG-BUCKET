@@ -143,3 +143,69 @@ test/
 ## License
 
 MIT
+
+## HTTP API (Render / headless server)
+
+The repository includes a dependency-light production API in `api.js`.
+It uses Node's built-in HTTP server and streams uploads into `Bucket.put`, so it does not load a whole upload into RAM.
+
+Set these variables on Render:
+
+```bash
+TG_API_ID=...
+TG_API_HASH=...
+TG_PHONE=...
+TG_BUCKET_PASSPHRASE=...
+TG_BUCKET_SESSION=...
+TG_BUCKET_API_KEY=... # optional but strongly recommended
+```
+
+Set the Render start command to:
+
+```bash
+npm start
+```
+
+Endpoints:
+
+```text
+GET    /health             health check
+GET    /api                API information
+GET    /files              list objects
+PUT    /files/:key         upload (request body is the file)
+GET    /files/:key         download
+DELETE /files/:key         delete
+```
+
+If `TG_BUCKET_API_KEY` is set, send:
+
+```text
+Authorization: Bearer YOUR_API_KEY
+```
+
+Example upload:
+
+```bash
+curl -X PUT \
+  'https://YOUR-RENDER-URL.onrender.com/files/hello.txt' \
+  -H 'Authorization: Bearer YOUR_API_KEY' \
+  -H 'Content-Type: text/plain' \
+  --data-binary 'Hello from TG-BUCKET'
+```
+
+Example list:
+
+```bash
+curl 'https://YOUR-RENDER-URL.onrender.com/files' \
+  -H 'Authorization: Bearer YOUR_API_KEY'
+```
+
+Example download:
+
+```bash
+curl 'https://YOUR-RENDER-URL.onrender.com/files/hello.txt' \
+  -H 'Authorization: Bearer YOUR_API_KEY' \
+  -o hello.txt
+```
+
+The original CLI and `examples/express-server.js` are left in place; the new API is an additional entry point.
