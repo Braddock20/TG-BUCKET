@@ -207,7 +207,8 @@ export class TGClient {
     const msgs = await this.client.getMessages(chat, { ids: [messageId] });
     if (!msgs || !msgs[0]) throw new Error(`Message ${messageId} not found`);
     const msg = msgs[0];
-    if (!msg.media || !msg.document) throw new Error(`Message ${messageId} has no document`);
+    const document = msg?.document || msg?.media?.document || null;
+    if (!document) throw new Error(`Message ${messageId} has no document`);
     const buf = await this.client.downloadMedia(msg, {});
     return buf;
   }
@@ -223,19 +224,33 @@ export class TGClient {
     const msgs = await this.client.getMessages(chat, opts);
     const out = [];
     for (const m of msgs) {
-      if (!m || !m.document) continue;
+      if (!m) continue;
+
+      // Teleproto/GramJS can expose Telegram documents as either
+      // message.document or message.media.document. Normalize both.
+      const document = m.document || m.media?.document || null;
+      if (!document) continue;
+
       let meta = null;
-      if (m.message) {
+      if (typeof m.message === 'string' && m.message.trim()) {
         try { meta = JSON.parse(m.message); } catch {}
       }
+
+      const attrs = Array.isArray(document.attributes) ? document.attributes : [];
+      const filenameAttr = attrs.find(a =>
+        a?.className === 'DocumentAttributeFilename' ||
+        a?.constructor?.className === 'DocumentAttributeFilename' ||
+        a?.fileName
+      );
+
       out.push({
         messageId: m.id,
-        documentId: m.document.id?.toString() || null,
-        size: Number(m.document.size?.toString() || 0),
+        documentId: document.id?.toString() || null,
+        size: Number(document.size?.toString() || 0),
         date: m.date,
-        meta,           // { kind: 'manifest' | 'chunk', key, idx, ... } or null
-        fileName: m.document.attributes?.find(a => a.className === 'DocumentAttributeFilename')?.fileName,
-        mimeType: m.document.mimeType,
+        meta,
+        fileName: filenameAttr?.fileName || null,
+        mimeType: document.mimeType || null,
       });
     }
     return out;
