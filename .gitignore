@@ -1,0 +1,8 @@
+node_modules/
+.env
+*.session
+*.session-journal
+bucket.data/
+test/fixtures/temp-*
+!test/fixtures/.gitkeep
+config.json
