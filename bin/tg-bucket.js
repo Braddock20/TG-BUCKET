@@ -43,7 +43,8 @@ Commands:
     phone: need('TG_PHONE'),
     passphrase: need('TG_BUCKET_PASSPHRASE'),
     bucketChannel: process.env.TG_BUCKET_CHANNEL,
-    sessionPath: process.env.TG_BUCKET_SESSION || './tg-bucket.session',
+    sessionPath: process.env.TG_BUCKET_SESSION_PATH || './tg-bucket.session',
+    session: process.env.TG_BUCKET_SESSION,
   };
 
   const bucket = await Bucket.connect(cfg);
@@ -51,6 +52,8 @@ Commands:
     switch (cmd) {
       case 'login':
         console.log('✅ Logged in. Session saved at', cfg.sessionPath);
+        console.log('\nFor headless deploys (Render etc), set this env var:');
+        console.log('  TG_BUCKET_SESSION=' + bucket.tg.client.session.save());
         break;
 
       case 'put': {
