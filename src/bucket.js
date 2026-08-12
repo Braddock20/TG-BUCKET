@@ -214,7 +214,7 @@ export class Bucket {
     // Telegram caps getMessages at 100; paginate
     // (Telegram also returns a "next offset" implicit when more exist; we just loop.)
     // To avoid hammering for very large buckets, cap at 1000 by default.
-    for (let safety = 0; safety < 50; safety++) {
+    for (let safety = 0; safety < 200; safety++) {
       const msgs = await this.tg.listObjects({ limit: 100, offsetId });
       if (msgs.length === 0) break;
       for (const m of msgs) {
