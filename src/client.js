@@ -52,7 +52,19 @@ export class TGClient {
       phoneNumber: this.cfg.phone,
       password: this.cfg.password,
       phoneCode: this.cfg.phoneCode,           // programmatic login
-      onError: (err) => console.error('[tg] auth error:', err.message),
+      onError: (err) => {
+        // If we have a saved session, these errors during initial auth are usually harmless.
+        // If we DON'T have a session AND we're in a non-interactive environment (no TTY),
+        // print a clear one-shot error instead of the default spam loop.
+        if (sessionStr && sessionStr.length > 0) return; // session present, ignore auth errors
+        if (!process.stdin.isTTY) {
+          console.error('\n[tg] No saved session and no interactive TTY available.');
+          console.error('    Run `node bin/tg-bucket.js login` LOCALLY first to create tg-bucket.session,');
+          console.error('    then ship that file to your server (Render disk / Secret File / env var).');
+          process.exit(1);
+        }
+        console.error('[tg] auth error:', err.message);
+      },
     });
     // Persist the new session string
     const newSession = this.client.session.save();
