@@ -207,10 +207,10 @@ export class TGClient {
     const msgs = await this.client.getMessages(chat, { ids: [messageId] });
     if (!msgs || !msgs[0]) throw new Error(`Message ${messageId} not found`);
     const msg = msgs[0];
-    // Teleproto/GramJS message objects can expose the Telegram document as
-    // either `message.document` or `message.media.document`. Normalize both.
-    const document = msg?.document || msg?.media?.document || null;
-    if (!msg?.media || !document) throw new Error(`Message ${messageId} has no document`);
+    // downloadMedia() can resolve the media directly from the Telegram
+    // message. Do not require a particular hydrated document property here;
+    // Teleproto can expose media differently across message shapes.
+    if (!msg?.media) throw new Error(`Message ${messageId} has no media`);
     const buf = await this.client.downloadMedia(msg, {});
     return buf;
   }
@@ -227,30 +227,34 @@ export class TGClient {
     const out = [];
     for (const m of msgs) {
       if (!m) continue;
-      // Depending on the Teleproto/GramJS version, Message may expose the
-      // document directly or nested under media. Use both representations.
-      const document = m.document || m.media?.document || null;
-      if (!document) continue;
 
+      // The bucket's authoritative catalog is the JSON caption. We must not
+      // require `m.document`/`m.media.document` just to discover an object:
+      // Telegram/Teleproto can hydrate those properties differently, while
+      // the caption remains available. This was the reason valid uploads
+      // could be present in Telegram but listObjects() returned [].
       let meta = null;
-      if (typeof m.message === 'string' && m.message.trim()) {
-        try { meta = JSON.parse(m.message); } catch {}
+      if (m.message) {
+        try { meta = JSON.parse(String(m.message)); } catch {}
       }
 
-      const attributes = Array.isArray(document.attributes) ? document.attributes : [];
-      const filenameAttr = attributes.find(a =>
-        a?.className === 'DocumentAttributeFilename' ||
-        a?.constructor?.className === 'DocumentAttributeFilename'
+      // Ignore ordinary Telegram messages; only TG-BUCKET objects have our
+      // structured metadata with kind/key.
+      if (!meta || (meta.kind !== 'manifest' && meta.kind !== 'chunk')) continue;
+
+      const document = m.document || m.media?.document || null;
+      const filenameAttr = document?.attributes?.find(
+        a => a.className === 'DocumentAttributeFilename' || a.fileName
       );
 
       out.push({
         messageId: m.id,
-        documentId: document.id?.toString() || null,
-        size: Number(document.size?.toString() || 0),
+        documentId: document?.id?.toString() || null,
+        size: Number(document?.size?.toString() || meta.size || meta.len || 0),
         date: m.date,
         meta,
         fileName: filenameAttr?.fileName,
-        mimeType: document.mimeType,
+        mimeType: document?.mimeType || meta.mimeType || 'application/octet-stream',
       });
     }
     return out;
