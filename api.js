@@ -150,6 +150,21 @@ async function download(res, key) {
 }
 
 const server = http.createServer(async (req, res) => {
+  // CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader(
+    'Access-Control-Expose-Headers',
+    'Content-Length, Content-Disposition, Content-Type'
+  );
+
+  // Browser CORS preflight
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    return res.end();
+  }
+
   try {
     const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
 
