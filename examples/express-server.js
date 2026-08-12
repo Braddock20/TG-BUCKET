@@ -54,4 +54,4 @@ app.delete('/:key(*)', async (req, res) => {
 });
 
 const port = Number(process.env.PORT) || 8787;
-app.listen(port, () => console.log(`tg-bucket HTTP gateway on :${port}`));
+app.listen(port, '0.0.0.0', () => console.log(`tg-bucket HTTP gateway on :${port}`));
