@@ -17,7 +17,9 @@
   "scripts": {
     "test": "node --test test/",
     "demo": "node examples/basic.js",
-    "cli": "node bin/tg-bucket.js"
+    "cli": "node bin/tg-bucket.js",
+    "start": "node api.js",
+    "api": "node api.js"
   },
   "engines": {
     "node": ">=18.0.0"
