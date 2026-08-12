@@ -37,9 +37,9 @@
   "license": "MIT",
   "dependencies": {
     "dotenv": "^16.4.5",
-    "teleproto": "^1.228.5"
-  },
-  "devDependencies": {
+    "teleproto": "^1.228.5",
+    "cors": "^2.8.5",
     "express": "^4.19.2"
-  }
+  },
+  "devDependencies": {}
 }
