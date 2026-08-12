@@ -18,9 +18,19 @@ const cfg = {
   phone: process.env.TG_PHONE,
   passphrase: process.env.TG_BUCKET_PASSPHRASE,
   bucketChannel: process.env.TG_BUCKET_CHANNEL,
+  // Required for headless deploys (Render etc): generate this by running
+  // `node bin/tg-bucket.js login` locally, then paste the printed string here.
+  session: process.env.TG_BUCKET_SESSION,
 };
 
-const bucket = await Bucket.connect(cfg);
+let bucket;
+try {
+  bucket = await Bucket.connect(cfg);
+} catch (err) {
+  console.error('[tg-bucket] Failed to connect:', err.message);
+  console.error('[tg-bucket] Set TG_BUCKET_SESSION (see README) — headless servers cannot do interactive login.');
+  process.exit(1);
+}
 const app = express();
 
 // Use raw bodies up to 2 GB. For real backends use streaming + a CDN.
