@@ -1,0 +1,43 @@
+{
+  "name": "tg-bucket",
+  "version": "0.1.0",
+  "description": "Turn your Telegram account into an encrypted, unlimited-ish object storage backend. Client-side AES-256-GCM, scrypt KDF, chunked MTProto uploads.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./src/client.js",
+    "./crypto": "./src/crypto.js",
+    "./bucket": "./src/bucket.js",
+    "./stream": "./src/stream.js"
+  },
+  "bin": {
+    "tg-bucket": "bin/tg-bucket.js"
+  },
+  "scripts": {
+    "test": "node --test test/",
+    "demo": "node examples/basic.js",
+    "cli": "node bin/tg-bucket.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "telegram",
+    "storage",
+    "mtproto",
+    "gramjs",
+    "encryption",
+    "aes-256-gcm",
+    "s3-alternative",
+    "object-storage"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "teleproto": "^1.228.5"
+  },
+  "devDependencies": {
+    "express": "^4.19.2"
+  }
+}
