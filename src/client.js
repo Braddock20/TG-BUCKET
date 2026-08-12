@@ -183,10 +183,17 @@ export class TGClient {
         : undefined,
     });
 
-    // Send as document to the bucket chat
-    const sent = await this.client.sendMessage(chat, {
+    // Send as document to the bucket chat.
+    // IMPORTANT: teleproto/GramJS's sendMessage() only reads `message` as the
+    // caption source when a `file` is present — internally it does
+    // `sendFile(entity, { ...params, caption: params.message })`, which
+    // silently overwrites any `caption` key we pass. Passing `caption` here
+    // (the old bug) meant the JSON metadata never actually attached to the
+    // message, so uploads "succeeded" but listObjects() had nothing to
+    // parse and always returned []. Use sendFile directly instead, which
+    // does honor `caption`.
+    const sent = await this.client.sendFile(chat, {
       file: uploaded,
-      mimeType,
       fileName,
       caption,
       forceDocument: true,
