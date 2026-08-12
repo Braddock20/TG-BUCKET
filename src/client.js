@@ -16,6 +16,16 @@ const { TelegramClient, Api } = teleproto;
 import { CustomFile } from 'teleproto/client/uploads.js';
 import fs from 'node:fs';
 import { StringSession } from 'teleproto/sessions/index.js';
+import readline from 'node:readline/promises';
+
+async function promptOnce(query) {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    return (await rl.question(query)).trim();
+  } finally {
+    rl.close();
+  }
+}
 
 export class TGClient {
   /**
@@ -42,35 +52,62 @@ export class TGClient {
     } else if (this.cfg.session) {
       sessionStr = this.cfg.session;
     }
+    const hasUsableSession = !!(sessionStr && sessionStr.length > 0);
+
+    // Fail FAST on headless deploys instead of looping against Telegram forever.
+    // process.stdin.isTTY is not a reliable "can a human type here" check on
+    // platforms like Render — don't rely on it to decide whether to bail.
+    const canPrompt = !!process.stdin.isTTY;
+    if (!hasUsableSession && !this.cfg.phoneCode && !process.env.TG_PHONE_CODE && !canPrompt) {
+      throw new Error(
+        '[tg] No saved session and no way to get a login code (no TTY, no phoneCode, no TG_PHONE_CODE). ' +
+        'Run `node bin/tg-bucket.js login` locally first, then set the printed session string as ' +
+        'TG_BUCKET_SESSION on your server.'
+      );
+    }
+
     const session = new StringSession(sessionStr);
     this.client = new TelegramClient(session, this.cfg.apiId, this.cfg.apiHash, {
       connectionRetries: 5,
       retryDelay: 1000,
       useWSS: false,
     });
+
+    let authError = null;
     await this.client.start({
-      phoneNumber: this.cfg.phone,
-      password: this.cfg.password,
-      phoneCode: this.cfg.phoneCode,           // programmatic login
+      phoneNumber: async () => this.cfg.phone,
+      password: async () => {
+        if (this.cfg.password) return String(this.cfg.password);
+        if (canPrompt) return promptOnce('[tg] 2FA password (leave blank if none): ');
+        return '';
+      },
+      // phoneCode MUST be an async function — teleproto calls it, it does not
+      // accept a raw string. Passing cfg.phoneCode directly (the old bug) meant
+      // this always resolved to undefined, which Telegram rejects as an empty code.
+      phoneCode: async () => {
+        if (this.cfg.phoneCode) return String(this.cfg.phoneCode);
+        if (process.env.TG_PHONE_CODE) return process.env.TG_PHONE_CODE;
+        if (canPrompt) return promptOnce('[tg] Enter the login code Telegram sent you: ');
+        throw new Error('No phoneCode available and no interactive TTY to prompt for one');
+      },
       onError: (err) => {
-        // If we have a saved session, these errors during initial auth are usually harmless.
-        // If we DON'T have a session AND we're in a non-interactive environment (no TTY),
-        // print a clear one-shot error instead of the default spam loop.
-        if (sessionStr && sessionStr.length > 0) return; // session present, ignore auth errors
-        if (!process.stdin.isTTY) {
-          console.error('\n[tg] No saved session and no interactive TTY available.');
-          console.error('    Run `node bin/tg-bucket.js login` LOCALLY first to create tg-bucket.session,');
-          console.error('    then ship that file to your server (Render disk / Secret File / env var).');
-          process.exit(1);
-        }
+        authError = err;
         console.error('[tg] auth error:', err.message);
+        return true; // REQUIRED: stop the retry loop. Without this, teleproto
+                      // retries the same failing attempt indefinitely.
       },
     });
+
+    if (authError && !hasUsableSession) {
+      throw new Error(`[tg] Authentication failed: ${authError.message}`);
+    }
+
     // Persist the new session string
     const newSession = this.client.session.save();
     if (newSession && (!sessionStr || newSession !== sessionStr)) {
       fs.writeFileSync(this.sessionPath, newSession, { mode: 0o600 });
       console.log('[tg] session saved to', this.sessionPath);
+      console.log('[tg] For headless deploys, set this as TG_BUCKET_SESSION:', newSession);
     }
     return this;
   }
