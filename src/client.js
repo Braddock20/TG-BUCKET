@@ -207,8 +207,10 @@ export class TGClient {
     const msgs = await this.client.getMessages(chat, { ids: [messageId] });
     if (!msgs || !msgs[0]) throw new Error(`Message ${messageId} not found`);
     const msg = msgs[0];
+    // Teleproto/GramJS message objects can expose the Telegram document as
+    // either `message.document` or `message.media.document`. Normalize both.
     const document = msg?.document || msg?.media?.document || null;
-    if (!document) throw new Error(`Message ${messageId} has no document`);
+    if (!msg?.media || !document) throw new Error(`Message ${messageId} has no document`);
     const buf = await this.client.downloadMedia(msg, {});
     return buf;
   }
@@ -225,9 +227,8 @@ export class TGClient {
     const out = [];
     for (const m of msgs) {
       if (!m) continue;
-
-      // Teleproto/GramJS can expose Telegram documents as either
-      // message.document or message.media.document. Normalize both.
+      // Depending on the Teleproto/GramJS version, Message may expose the
+      // document directly or nested under media. Use both representations.
       const document = m.document || m.media?.document || null;
       if (!document) continue;
 
@@ -236,11 +237,10 @@ export class TGClient {
         try { meta = JSON.parse(m.message); } catch {}
       }
 
-      const attrs = Array.isArray(document.attributes) ? document.attributes : [];
-      const filenameAttr = attrs.find(a =>
+      const attributes = Array.isArray(document.attributes) ? document.attributes : [];
+      const filenameAttr = attributes.find(a =>
         a?.className === 'DocumentAttributeFilename' ||
-        a?.constructor?.className === 'DocumentAttributeFilename' ||
-        a?.fileName
+        a?.constructor?.className === 'DocumentAttributeFilename'
       );
 
       out.push({
@@ -249,8 +249,8 @@ export class TGClient {
         size: Number(document.size?.toString() || 0),
         date: m.date,
         meta,
-        fileName: filenameAttr?.fileName || null,
-        mimeType: document.mimeType || null,
+        fileName: filenameAttr?.fileName,
+        mimeType: document.mimeType,
       });
     }
     return out;
